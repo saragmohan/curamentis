@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import logo from "../../public/Assets/logo_curamentis.png";
 import heroImage from "../../public/Assets/therapy-room.jpg";
 
 const Hero = () => {
@@ -13,6 +14,12 @@ const Hero = () => {
       {/* Content */}
       <div className="relative z-10 container mx-auto px-6 text-center">
         <div className="max-w-4xl mx-auto animate-fade-in">
+          <img
+            src={logo}
+            alt="Cura Mentis logo"
+            className="mx-auto mb-6 w-20 h-20 object-contain"
+          />
+
           <h1 className="text-5xl md:text-7xl font-light mb-8 text-foreground leading-tight">
             Find Your
             <span className="block text-primary font-medium">Inner Peace</span>
@@ -27,15 +34,13 @@ const Hero = () => {
             <Button
               size="lg"
               className="bg-gradient-primary hover:shadow-medium transition-all duration-500 text-lg px-8 py-6 rounded-full"
+              onClick={() =>
+                document
+                  .getElementById("contact")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               Schedule a Session
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-lg px-8 py-6 rounded-full border-2 border-primary/30 hover:border-primary hover:bg-primary/5 transition-all duration-500"
-            >
-              Learn More
             </Button>
           </div>
         </div>

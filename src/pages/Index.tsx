@@ -3,11 +3,16 @@ import Contact from "@/components/Contact";
 import Hero from "@/components/Hero";
 import Navigation from "@/components/Navigation";
 import Services from "@/components/Services";
+import WhatsAppButton from "@/components/ui/WhatsappButton";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      <WhatsAppButton
+        phone="917012241360"
+        message="Hi, I would like to book a session."
+      />
 
       <main>
         <section id="home">
@@ -41,16 +46,16 @@ const Index = () => {
 
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-8 mb-6">
             <span className="text-muted-foreground text-sm">
-              (+91) 98956 29261
+              (+91) 7012241360
             </span>
             <span className="text-muted-foreground text-sm">
-              sijishasacheendran@gmail.com
+              thecuramentis@gmail.com
             </span>
           </div>
 
           <div className="border-t border-border/30 pt-6">
             <p className="text-muted-foreground text-xs">
-              © 2024 Curamentis. All rights reserved.
+              © 2026 Curamentis. All rights reserved.
               <span className="block mt-1">
                 Confidential mental health services in a safe, supportive
                 environment.
