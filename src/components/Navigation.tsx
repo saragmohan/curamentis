@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import logo from "../../public/Assets/logo_curamentis.png";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -9,7 +10,16 @@ const Navigation = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="font-medium text-xl text-primary">Curamentis</div>
+          <div className="flex items-center space-x-3">
+            <img
+              src={logo}
+              alt="Cura Mentis logo"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-medium text-xl text-primary">
+              Cura Mentis
+            </span>
+          </div>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
@@ -40,6 +50,11 @@ const Navigation = () => {
             <Button
               size="sm"
               className="bg-gradient-primary hover:shadow-medium transition-all duration-300 px-6"
+              onClick={() =>
+                document
+                  .getElementById("contact")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               Book Session
             </Button>
