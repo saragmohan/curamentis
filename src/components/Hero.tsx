@@ -21,13 +21,16 @@ const Hero = () => {
           />
 
           <h1 className="text-5xl md:text-7xl font-light mb-8 text-foreground leading-tight">
-            Find Your
-            <span className="block text-primary font-medium">Inner Peace</span>
+            Cura Mentis
+            <span className="block text-primary font-medium">
+              Where Transformation Begins Within
+            </span>
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-            A safe space for healing, growth, and self-discovery. Together,
-            we'll navigate your journey toward mental wellness.
+            A safe space for healing and growth. Through counseling,
+            hypnotherapy, and life coaching, we help you build resilience and
+            reconnect with your true self.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">

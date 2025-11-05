@@ -3,51 +3,55 @@ import { Card } from "@/components/ui/card";
 const Services = () => {
   const services = [
     {
-      title: "Individual Therapy",
+      title: "Individual Counseling",
       description:
-        "One-on-one sessions tailored to your unique needs and goals, focusing on personal growth and healing.",
+        "Personalized one-on-one sessions to help you manage anxiety, depression, low self-esteem, stress, or life transitions.Each session is a safe space to understand your emotions and build healthier coping patterns.",
       icon: "🧘‍♀️",
       features: [
         "Anxiety & Depression",
         "Trauma Recovery",
         "Life Transitions",
         "Self-Esteem",
+        "Personal Growth",
       ],
     },
     {
-      title: "Couples Counseling",
+      title: "Relationship & Marital Therapy",
       description:
-        "Strengthen your relationship through improved communication and deeper understanding.",
+        "A supportive space for couples to reconnect, improve communication, rebuild trust, and understand emotional needs—helping you nurture a relationship based on empathy and balance.",
       icon: "💕",
       features: [
-        "Communication Skills",
+        "Communication Enhancement",
         "Conflict Resolution",
-        "Intimacy Building",
-        "Trust Rebuilding",
+        "Trust Building & Healing",
+        "Emotional Intimacy",
+        "Managing Anger & Misunderstandings",
       ],
     },
     {
       title: "Family Therapy",
       description:
-        "Create healthier family dynamics and improve relationships between family members.",
+        "Guidance for families navigating conflict, parenting concerns, or emotional distance. Therapy helps each member express themselves better and rebuild harmony within the home.",
       icon: "👨‍👩‍👧‍👦",
       features: [
-        "Family Dynamics",
-        "Parenting Support",
-        "Teen Counseling",
-        "Blended Families",
+        "Parent–Child Relationship Support",
+        "Family Conflict Resolution",
+        "Communication & Understanding",
+        "Blended Family Adjustment",
+        "Emotional Bonding & Trust",
       ],
     },
     {
-      title: "Group Sessions",
+      title: "Child & Adolescent Counseling",
       description:
-        "Connect with others facing similar challenges in a supportive group environment.",
-      icon: "🤝",
+        "Therapeutic care for children and teens facing academic pressure, behavioral issues, emotional distress, or social difficulties. Sessions are gentle, engaging, and age-appropriate.",
+      icon: "🧒",
       features: [
-        "Support Groups",
-        "Skills Building",
-        "Peer Connection",
-        "Shared Growth",
+        "Academic Stress & Exam Anxiety",
+        "Behavioral & Attention Issues",
+        "Social & Peer Relationship Challenges",
+        "Confidence & Self-Esteem Building",
+        "Early Intervention & Preventive Care",
       ],
     },
   ];
