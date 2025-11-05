@@ -1,5 +1,5 @@
 import { Slot } from "@radix-ui/react-slot";
-import { ChevronRight, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -76,14 +76,12 @@ const BreadcrumbSeparator = ({
   children,
   className,
   ...props
-}: React.ComponentProps<"li">) => (
-  <li
-    role="presentation"
-export {
-    Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem,
-    BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
-    BreadcrumbSeparator
-};
+}: React.ComponentProps<"li">) => <li role="presentation"></li>;
+// export {
+//     Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem,
+//     BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+//     BreadcrumbSeparator
+// };
 
 const BreadcrumbEllipsis = ({
   className,
@@ -103,10 +101,10 @@ BreadcrumbEllipsis.displayName = "BreadcrumbElipssis";
 
 export {
   Breadcrumb,
-  BreadcrumbList,
+  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
+  BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  BreadcrumbEllipsis,
 };
