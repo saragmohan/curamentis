@@ -45,7 +45,7 @@ const About = () => {
             {/* Credentials */}
             <div className="grid grid-cols-2 gap-6">
               <Card className="bg-gradient-card shadow-soft border-0 p-6 text-center hover:shadow-medium transition-all duration-500">
-                <div className="text-3xl font-light text-primary mb-2">3+</div>
+                <div className="text-3xl font-light text-primary mb-2">2+</div>
                 <div className="text-muted-foreground text-sm">
                   Years Experience
                 </div>

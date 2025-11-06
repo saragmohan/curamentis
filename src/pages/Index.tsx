@@ -37,10 +37,10 @@ const Index = () => {
         <div className="container mx-auto px-6 text-center">
           <div className="mb-6">
             <h3 className="text-xl font-medium text-primary mb-2">
-              Curamentis
+              Cura Mentis
             </h3>
             <p className="text-muted-foreground text-sm">
-              Healing Minds, Nurturing Growth
+              Your path to mindful living.
             </p>
           </div>
 
@@ -73,7 +73,7 @@ const Index = () => {
 
           <div className="border-t border-border/30 pt-6">
             <p className="text-muted-foreground text-xs">
-              © 2026 Curamentis. All rights reserved.
+              © 2026 Cura Mentis. All rights reserved.
               <span className="block mt-1">
                 Confidential mental health services in a safe, supportive
                 environment.

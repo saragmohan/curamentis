@@ -16,6 +16,19 @@ const Services = () => {
       ],
     },
     {
+      title: "Child & Adolescent Counseling",
+      description:
+        "Therapeutic care for children and teens facing academic pressure, behavioral issues, emotional distress, or social difficulties. Sessions are gentle, engaging, and age-appropriate.",
+      icon: "🧒",
+      features: [
+        "Academic Stress & Exam Anxiety",
+        "Behavioral & Attention Issues",
+        "Social & Peer Relationship Challenges",
+        "Confidence & Self-Esteem Building",
+        "Early Intervention & Preventive Care",
+      ],
+    },
+    {
       title: "Relationship & Marital Therapy",
       description:
         "A supportive space for couples to reconnect, improve communication, rebuild trust, and understand emotional needs—helping you nurture a relationship based on empathy and balance.",
@@ -42,16 +55,29 @@ const Services = () => {
       ],
     },
     {
-      title: "Child & Adolescent Counseling",
+      title: "Hypnotherapy",
       description:
-        "Therapeutic care for children and teens facing academic pressure, behavioral issues, emotional distress, or social difficulties. Sessions are gentle, engaging, and age-appropriate.",
-      icon: "🧒",
+        "A focused and deeply relaxing approach that works with the subconscious mind to promote emotional healing, manage fears, and release unwanted patterns.",
+      icon: "🌀",
       features: [
-        "Academic Stress & Exam Anxiety",
-        "Behavioral & Attention Issues",
-        "Social & Peer Relationship Challenges",
-        "Confidence & Self-Esteem Building",
-        "Early Intervention & Preventive Care",
+        "Stress Reduction",
+        "Anxiety Management",
+        "Trauma Healing",
+        "Behavioral Change",
+        "Self-Discovery",
+      ],
+    },
+    {
+      title: " Life Coaching",
+      description:
+        "Goal-focused sessions that help you identify your strengths, break limiting beliefs, and create a fulfilling path toward personal and professional growth.",
+      icon: "🎯",
+      features: [
+        "Personal & Professional Growth",
+        "Goal Setting & Achievement",
+        "Confidence & Self-Empowerment",
+        "Decision Making & Clarity",
+        "Motivation & Habit Building",
       ],
     },
   ];
@@ -70,7 +96,7 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {services.map((service, index) => (
             <Card
               key={index}
@@ -97,6 +123,43 @@ const Services = () => {
               </div>
             </Card>
           ))}
+        </div> */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {services.map((service, index) => {
+            const positionClass =
+              index >= 4
+                ? index === 4
+                  ? "lg:col-start-2"
+                  : "lg:col-start-3"
+                : "";
+
+            return (
+              <Card
+                key={index}
+                className={`${positionClass} bg-gradient-card shadow-soft border-0 p-8 text-center hover:shadow-large transition-all duration-700 hover:-translate-y-2 group`}
+              >
+                <div className="text-5xl mb-6 group-hover:animate-gentle-float">
+                  {service.icon}
+                </div>
+                <h3 className="text-xl font-medium text-foreground mb-4">
+                  {service.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                  {service.description}
+                </p>
+                <div className="space-y-2">
+                  {service.features.map((feature, idx) => (
+                    <div
+                      key={idx}
+                      className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-full inline-block mr-2 mb-2"
+                    >
+                      {feature}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

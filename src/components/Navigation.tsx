@@ -29,9 +29,14 @@ const Navigation = () => {
               alt="Cura Mentis logo"
               className="w-8 h-8 object-contain"
             />
-            <span className="font-medium text-xl text-primary">
-              Cura Mentis
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-medium text-xl text-primary">
+                Cura Mentis
+              </span>
+              <span className="text-xs text-muted-foreground -mt-0.5">
+                Your path to mindful living
+              </span>
+            </div>
           </div>
 
           {/* Desktop Menu */}
@@ -104,24 +109,28 @@ const Navigation = () => {
             <div className="flex flex-col space-y-4">
               <a
                 href="#home"
+                onClick={(e) => handleNavClick(e, "home")}
                 className="text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 Home
               </a>
               <a
                 href="#about"
+                onClick={(e) => handleNavClick(e, "about")}
                 className="text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 About
               </a>
               <a
                 href="#services"
+                onClick={(e) => handleNavClick(e, "services")}
                 className="text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 Services
               </a>
               <a
                 href="#contact"
+                onClick={(e) => handleNavClick(e, "contact")}
                 className="text-muted-foreground hover:text-primary transition-colors duration-300"
               >
                 Contact
@@ -129,6 +138,12 @@ const Navigation = () => {
               <Button
                 size="sm"
                 className="bg-gradient-primary hover:shadow-medium transition-all duration-300 w-fit"
+                onClick={() => {
+                  document
+                    .getElementById("contact")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                  setIsMenuOpen(false);
+                }}
               >
                 Book Session
               </Button>
