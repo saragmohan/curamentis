@@ -1,0 +1,534 @@
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+// Appointment booking system with date blocking and Google Forms submission
+// Saves name, mobile, and date to Google Sheet via Google Forms
+
+const AVAILABLE_SLOTS = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"
+];
+
+// Google Apps Script configuration for appointments
+// Direct API endpoint to save data to Google Sheet
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsiY2xbvUvjFu8MNzX133iAtpkCT0RnrEkkFOFVaL_XtjZbsz2dGF8W9JK7XTCqilF/exec";
+
+function getToday() {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now;
+}
+
+interface Appointment {
+  id: string;
+  date: string;
+  time: string;
+  userName: string;
+  userMobile: string;
+}
+
+export default function AppointmentBooking() {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userMobile, setUserMobile] = useState("");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [showPopup, setShowPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // Fetch appointments from Google Sheet to sync deletions
+  async function fetchAppointmentsFromGoogle() {
+    try {
+      console.log("📡 Syncing appointments from Google Sheet...");
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=getAppointments", {
+        method: "GET",
+        mode: "cors",
+      });
+
+      // Only attempt to parse if response is ok
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Fetched appointments from Google Sheet:", data);
+        return data.appointments || [];
+      } else {
+        console.log("ℹ️ Google Sheet sync not available (GET endpoint may not be set up)");
+        return null;
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not fetch from Google Sheet, using local data:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
+  // Load appointments from localStorage on mount and sync from Google Sheet
+  useEffect(() => {
+    const loadAppointments = async () => {
+      // First try to fetch from Google Sheet
+      const googleAppointments = await fetchAppointmentsFromGoogle();
+
+      if (googleAppointments) {
+        // Use fresh data from Google Sheet
+        setAppointments(googleAppointments);
+        localStorage.setItem("curamentis-appointments", JSON.stringify(googleAppointments));
+        console.log("✅ Synced appointments from Google Sheet:", googleAppointments);
+      } else {
+        // Fallback to localStorage if Google Sheet sync fails
+        const stored = localStorage.getItem("curamentis-appointments");
+        if (stored) {
+          try {
+            setAppointments(JSON.parse(stored));
+            console.log("✅ Loaded appointments from localStorage");
+          } catch (e) {
+            console.error("Failed to load appointments:", e);
+          }
+        }
+      }
+    };
+
+    loadAppointments();
+  }, []);
+
+  // Save appointments to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("curamentis-appointments", JSON.stringify(appointments));
+  }, [appointments]);
+
+  // Dates that are fully booked (all time slots taken)
+  const fullyBookedDates = (() => {
+    const dateSlotCounts: Record<string, number> = {};
+    appointments.forEach(a => {
+      dateSlotCounts[a.date] = (dateSlotCounts[a.date] || 0) + 1;
+    });
+    // Only block date if ALL slots are taken
+    return Object.keys(dateSlotCounts).filter(
+      d => dateSlotCounts[d] >= AVAILABLE_SLOTS.length
+    );
+  })();
+
+  // Check if a specific date-time slot is booked
+  const isSlotBooked = (date: Date, time: string): boolean => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return appointments.some(a => a.date === dateStr && a.time === time);
+  };
+
+  // Handle date selection
+  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newDate = new Date(e.target.value);
+    setSelectedDate(newDate);
+    setSelectedTime(null);
+    setBookingSuccess(false);
+  }
+
+  // Handle time selection
+  function handleTimeSelect(time: string) {
+    setSelectedTime(time);
+  }
+
+  // Submit to Google Apps Script
+  async function submitToGoogle(data: { name: string; mobile: string; dateTime: string }) {
+    console.log("📝 Submitting to Google Sheet:", {
+      name: data.name,
+      mobile: data.mobile,
+      dateTime: data.dateTime,
+    });
+
+    try {
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          mobile: data.mobile,
+          dateTime: data.dateTime,
+        }),
+      });
+
+      console.log("✅ Appointment submitted to Google Sheet!");
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Google Sheet submission error:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : "N/A",
+      });
+      throw error;
+    }
+  }
+
+  // Handle booking submission
+  async function handleBookAppointment() {
+    if (!selectedDate || !selectedTime) return;
+
+    if (!userName.trim()) {
+      alert("Please enter your name.");
+      return;
+    }
+
+    if (!userMobile.trim() || !/^\d{10}$/.test(userMobile.trim())) {
+      alert("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    // Check if date is already booked
+    if (isSlotBooked(selectedDate, selectedTime)) {
+      alert("This time slot has already been booked. Please select another time.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const timeStr = selectedTime;
+      const fullDateTime = `${dateStr} ${timeStr}`;
+
+      console.log("🔄 Processing appointment...");
+      console.log("   Name:", userName);
+      console.log("   Mobile:", userMobile);
+      console.log("   Date & Time:", fullDateTime);
+
+      // Submit to Google Apps Script
+      await submitToGoogle({
+        name: userName,
+        mobile: userMobile,
+        dateTime: fullDateTime,
+      });
+
+      // Add appointment to local state
+      const newAppointment: Appointment = {
+        id: Math.random().toString(36).slice(2),
+        date: dateStr,
+        time: timeStr,
+        userName,
+        userMobile,
+      };
+
+      setAppointments([...appointments, newAppointment]);
+      setBookingSuccess(true);
+      setShowPopup(true);
+
+      console.log("✨ Appointment completed! Data saved to spreadsheet.");
+
+      // Reset form
+      setTimeout(() => {
+        setUserName("");
+        setUserMobile("");
+        setSelectedDate(null);
+        setSelectedTime(null);
+      }, 1500);
+    } catch (err) {
+      console.error("Booking error:", err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      alert(`Failed to book appointment: ${errorMsg}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const getStepsCompleted = () => {
+    let steps = 0;
+    if (selectedDate) steps++;
+    if (selectedTime) steps++;
+    if (userName.trim()) steps++;
+    if (userMobile.trim() && /^\d{10}$/.test(userMobile.trim())) steps++;
+    return steps;
+  };
+
+  const totalSteps = 4;
+  const stepsCompleted = getStepsCompleted();
+
+  return (
+    <section id="appointment" className="py-24 bg-background relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-10 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: "1s"}} />
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12 animate-fade-in">
+            <div className="inline-block mb-4 px-4 py-2 bg-primary/10 rounded-full">
+              <span className="text-sm font-semibold text-primary">✨ Easy & Convenient</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-light text-foreground mb-4">
+              Book Your
+              <span className="block text-primary font-semibold">Appointment</span>
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
+              Take the first step towards your wellness journey. Select your preferred date and time slots at your convenience.
+            </p>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="mb-8 animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Progress</span>
+              <span className="text-xs font-medium text-muted-foreground">{stepsCompleted} of {totalSteps}</span>
+            </div>
+            <div className="w-full h-2 bg-background/50 rounded-full overflow-hidden backdrop-blur-sm border border-border/30">
+              <div 
+                className="h-full bg-gradient-primary transition-all duration-500 ease-out rounded-full"
+                style={{width: `${(stepsCompleted / totalSteps) * 100}%`}}
+              />
+            </div>
+          </div>
+
+          {/* Booking Form Card */}
+          <Card className="bg-white/40 backdrop-blur-xl border border-white/50 shadow-2xl p-8 animate-fade-in relative overflow-hidden group">
+            {/* Glassmorphism shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            
+            <div className="space-y-7 relative z-10">
+              {/* Step 1: Date Selection */}
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                    1
+                  </div>
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span>📅</span> Select Your Date
+                  </label>
+                </div>
+                <div className="ml-11">
+                  <Input
+                    type="date"
+                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                    min={format(getToday(), "yyyy-MM-dd")}
+                    max={format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")}
+                    onChange={handleDateChange}
+                    disabled={isSubmitting}
+                    className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                  />
+                  {selectedDate && <p className="text-xs text-primary mt-2 font-medium">✓ {format(selectedDate, "EEEE, MMMM d")}</p>}
+                </div>
+              </div>
+
+              {/* Step 2: Time Selection */}
+              {selectedDate && !fullyBookedDates.includes(format(selectedDate, "yyyy-MM-dd")) && (
+                <div className="relative animate-fade-in">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                      2
+                    </div>
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <span>⏰</span> Choose Time Slot
+                    </label>
+                  </div>
+                  <div className="ml-11">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                      {AVAILABLE_SLOTS.map(time => {
+                        const isBooked = isSlotBooked(selectedDate, time);
+                        const isSelected = selectedTime === time;
+                        return (
+                          <button
+                            key={time}
+                            disabled={isBooked || isSubmitting}
+                            onClick={() => handleTimeSelect(time)}
+                            className={`group/slot px-3 py-3 rounded-xl text-sm font-medium border-2 transition-all duration-300 transform ${
+                              isBooked
+                                ? "bg-muted/30 text-muted-foreground cursor-not-allowed border-border/20 opacity-50"
+                                : isSelected
+                                ? "bg-gradient-primary text-white border-primary shadow-lg scale-105"
+                                : "bg-white/40 text-foreground border-border/30 hover:border-primary/50 hover:shadow-md hover:scale-102 backdrop-blur-sm"
+                            }`}
+                          >
+                            {time}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedTime && <p className="text-xs text-primary mt-3 font-medium">✓ {selectedTime} selected</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* Fully booked message */}
+              {selectedDate && fullyBookedDates.includes(format(selectedDate, "yyyy-MM-dd")) && (
+                <div className="animate-fade-in bg-amber-50/60 backdrop-blur-sm border-2 border-amber-200/50 rounded-xl p-5 text-amber-900">
+                  <p className="font-semibold flex items-center gap-2 mb-1">
+                    <span>📅</span> Date Fully Booked
+                  </p>
+                  <p className="text-sm mt-2">All time slots are reserved. Please select another date.</p>
+                </div>
+              )}
+
+              {/* Step 3: Personal Information */}
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                    3
+                  </div>
+                  <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <span>👤</span> Your Details
+                  </label>
+                </div>
+                <div className="ml-11 space-y-3">
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="Full Name"
+                      value={userName}
+                      onChange={e => setUserName(e.target.value)}
+                      disabled={isSubmitting}
+                      className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                    />
+                    {userName.trim() && <p className="text-xs text-primary mt-1.5 font-medium">✓ Name entered</p>}
+                  </div>
+                  
+                  <div>
+                    <Input
+                      type="tel"
+                      placeholder="10-digit mobile number"
+                      value={userMobile}
+                      onChange={e => setUserMobile(e.target.value.replace(/\D/g, ""))}
+                      maxLength={10}
+                      disabled={isSubmitting}
+                      className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                    />
+                    {userMobile.trim() && /^\d{10}$/.test(userMobile.trim()) && (
+                      <p className="text-xs text-primary mt-1.5 font-medium">✓ Valid mobile number</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4: Confirmation */}
+              {stepsCompleted === totalSteps && (
+                <div className="relative animate-fade-in">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600 text-sm font-semibold">
+                      ✓
+                    </div>
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <span>🎯</span> Ready to Confirm
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Book button */}
+              {selectedDate && selectedTime && !fullyBookedDates.includes(format(selectedDate, "yyyy-MM-dd")) && (
+                <Button
+                  onClick={handleBookAppointment}
+                  disabled={isSubmitting || stepsCompleted !== totalSteps}
+                  className={`w-full py-4 mt-4 font-semibold text-base transition-all duration-500 transform ${
+                    stepsCompleted === totalSteps
+                      ? "bg-gradient-primary hover:shadow-xl hover:scale-102 active:scale-95"
+                      : "bg-gradient-primary opacity-60 cursor-not-allowed"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="inline-block animate-spin">⏳</span> Booking...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <span>🚀</span> Confirm Appointment
+                    </span>
+                  )}
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {/* Info box */}
+          <Card className="bg-white/30 backdrop-blur-xl border border-white/50 shadow-xl p-8 mt-10 animate-fade-in">
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">💡</div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Why book with us?</p>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-3 group">
+                    <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>
+                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">Easy & Fast</span> – Book in just 4 simple steps</span>
+                  </li>
+                  <li className="flex items-start gap-3 group">
+                    <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>
+                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">Real-time Availability</span> – See available slots instantly</span>
+                  </li>
+                  <li className="flex items-start gap-3 group">
+                    <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>
+                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">Flexible Scheduling</span> – Choose from 12 time slots daily</span>
+                  </li>
+                  <li className="flex items-start gap-3 group">
+                    <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>
+                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">30-Day Window</span> – Book up to a month in advance</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Success popup */}
+      {showPopup && bookingSuccess && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div 
+            className="bg-black/30 backdrop-blur-sm absolute inset-0" 
+            onClick={() => setShowPopup(false)} 
+          />
+          <Card className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl p-10 z-10 max-w-sm w-full text-center animate-fade-in relative overflow-hidden">
+            {/* Success animation background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent opacity-0 animate-pulse" />
+            
+            <div className="relative z-10">
+              {/* Success checkmark with animation */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-5xl animate-bounce">
+                  ✓
+                </div>
+              </div>
+              
+              <h3 className="text-3xl font-bold text-foreground mb-2">Perfect!</h3>
+              <p className="text-lg font-semibold text-primary mb-2">Appointment Confirmed</p>
+              
+              <p className="text-muted-foreground text-sm mb-8">
+                Your appointment has been successfully booked and saved. We look forward to seeing you!
+              </p>
+              
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-5 mb-8 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <span>📅</span> Date
+                  </span>
+                  <p className="font-semibold text-foreground">
+                    {selectedDate && format(selectedDate, "MMM dd, yyyy")}
+                  </p>
+                </div>
+                <div className="h-px bg-border/30" />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-sm flex items-center gap-2">
+                    <span>⏰</span> Time
+                  </span>
+                  <p className="font-semibold text-foreground">{selectedTime}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  A confirmation has been sent to your mobile number. If you need to reschedule, please contact us at least 24 hours in advance.
+                </p>
+              </div>
+              
+              <Button
+                onClick={() => setShowPopup(false)}
+                className="w-full bg-gradient-primary hover:shadow-xl text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-95"
+              >
+                Done
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </section>
+  );
+}

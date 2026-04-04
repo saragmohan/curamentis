@@ -39,7 +39,7 @@ const Hero = () => {
               className="bg-gradient-primary hover:shadow-medium transition-all duration-500 text-lg px-8 py-6 rounded-full"
               onClick={() =>
                 document
-                  .getElementById("contact")
+                  .getElementById("appointment")
                   ?.scrollIntoView({ behavior: "smooth" })
               }
             >

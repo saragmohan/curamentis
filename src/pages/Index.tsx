@@ -1,9 +1,12 @@
+
 import About from "@/components/About";
 import Contact from "@/components/Contact";
 import Hero from "@/components/Hero";
 import Navigation from "@/components/Navigation";
 import Services from "@/components/Services";
 import WhatsAppButton from "@/components/ui/WhatsappButton";
+import AppointmentBooking from "@/components/AppointmentBooking";
+import ClinicLocation from "@/components/ClinicLocation";
 
 const Index = () => {
   return (
@@ -13,6 +16,7 @@ const Index = () => {
         phone="917012241360"
         message="Hi, I would like to book a session."
       />
+
 
       <main>
         <section id="home">
@@ -25,6 +29,15 @@ const Index = () => {
 
         <section id="services">
           <Services />
+        </section>
+
+        <section id="appointment" className="py-8">
+          <AppointmentBooking />
+        </section>
+
+
+        <section id="location">
+          <ClinicLocation />
         </section>
 
         <section id="contact">
