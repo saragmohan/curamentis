@@ -27,11 +27,12 @@ const About = () => {
               <h2 className="text-4xl md:text-5xl font-light text-foreground mb-6">
                 Hello, I'm
                 <span className="block text-primary font-medium">
-                  Sijisha Sacheendran
+                  Sijisha Sacheendran 
+                  <span className="block text-[25px]">(Consultant Psychologist)</span>
                 </span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                With MSc and MA in Psychology, a Post Graduate Diploma in
+                With MA in Psychology, a Post Graduate Diploma in
                 Counseling Psychology (PGDCP), and specialized diplomas in Child
                 & Adolescent Counseling and Hypnotherapy.
               </p>

@@ -74,7 +74,7 @@ const Navigation = () => {
               className="bg-gradient-primary hover:shadow-medium transition-all duration-300 px-6"
               onClick={() =>
                 document
-                  .getElementById("contact")
+                  .getElementById("appointment")
                   ?.scrollIntoView({ behavior: "smooth" })
               }
             >
