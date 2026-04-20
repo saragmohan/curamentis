@@ -8,14 +8,13 @@ import { Button } from "@/components/ui/button";
 // Saves name, mobile, and date to Google Sheet via Google Forms
 
 const AVAILABLE_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30"
+  "09:00", "11:00",
+  "13:00", "15:00", "17:00", "19:00"
 ];
 
 // Google Apps Script configuration for appointments
 // Direct API endpoint to save data to Google Sheet
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsiY2xbvUvjFu8MNzX133iAtpkCT0RnrEkkFOFVaL_XtjZbsz2dGF8W9JK7XTCqilF/exec";
-
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywMPheoQOLxX_gRq1yZ-pHXhKuN_FuHjoDNHRkaVpX_mzswwbdgotZM6Uy0KhGrJev/exec";
 function getToday() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -39,57 +38,123 @@ export default function AppointmentBooking() {
   const [showPopup, setShowPopup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [isSyncingAppointments, setIsSyncingAppointments] = useState(true);
+  const [availableSlots, setAvailableSlots] = useState<string[]>(AVAILABLE_SLOTS);
+  const [timeSlotsByDate, setTimeSlotsByDate] = useState<Record<string, string[]>>({}); // { "2024-04-20": ["09:00", "11:00", ...] }
+  const [blockedSlots, setBlockedSlots] = useState<{date: string, time: string}[]>([]);
 
   // Fetch appointments from Google Sheet to sync deletions
   async function fetchAppointmentsFromGoogle() {
     try {
-      console.log("📡 Syncing appointments from Google Sheet...");
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL + "?action=getAppointments", {
-        method: "GET",
-        mode: "cors",
-      });
+      console.log("📡 Syncing appointments...");
+      const response = await fetch(
+      `${GOOGLE_APPS_SCRIPT_URL}?action=getAppointments`
+      );
 
-      // Only attempt to parse if response is ok
-      if (response.ok) {
-        const data = await response.json();
-        console.log("✅ Fetched appointments from Google Sheet:", data);
-        return data.appointments || [];
-      } else {
-        console.log("ℹ️ Google Sheet sync not available (GET endpoint may not be set up)");
-        return null;
-      }
+    const data = await response.json();
+    return data.appointments || [];
+    
     } catch (error) {
       console.warn("⚠️ Could not fetch from Google Sheet, using local data:", error instanceof Error ? error.message : error);
       return null;
     }
   }
 
-  // Load appointments from localStorage on mount and sync from Google Sheet
-  useEffect(() => {
-    const loadAppointments = async () => {
-      // First try to fetch from Google Sheet
-      const googleAppointments = await fetchAppointmentsFromGoogle();
+  // Fetch available time slots by date from Google Sheet
+  async function fetchTimeSlotsFromGoogle() {
+    try {
 
-      if (googleAppointments) {
-        // Use fresh data from Google Sheet
-        setAppointments(googleAppointments);
-        localStorage.setItem("curamentis-appointments", JSON.stringify(googleAppointments));
-        console.log("✅ Synced appointments from Google Sheet:", googleAppointments);
-      } else {
-        // Fallback to localStorage if Google Sheet sync fails
-        const stored = localStorage.getItem("curamentis-appointments");
-        if (stored) {
-          try {
-            setAppointments(JSON.parse(stored));
-            console.log("✅ Loaded appointments from localStorage");
-          } catch (e) {
-            console.error("Failed to load appointments:", e);
+      const response = await fetch(
+        `${GOOGLE_APPS_SCRIPT_URL}?action=getTimeSlots`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return data.timeSlots || {}; // Returns { "date": ["time1", "time2", ...] }
+    } catch (error) {
+      console.warn(
+        "⚠️ Could not fetch time slots from Google Sheet:",
+        error instanceof Error ? error.message : error
+      );
+      return {};
+    }
+  }
+
+  // Get time slots for a specific date (from sheet or default)
+  const getTimeSlotsForDate = (date: Date): string[] => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    // If date has custom slots in sheet, use those
+    if (timeSlotsByDate[dateStr] && timeSlotsByDate[dateStr].length > 0) {
+      return timeSlotsByDate[dateStr];
+    }
+    // Otherwise use global availableSlots
+    return availableSlots;
+  };
+
+  // Fetch blocked slots from Google Sheet
+  async function fetchBlockedSlotsFromGoogle() {
+    try {
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: JSON.stringify({
+          action: "getBlockedSlots"
+        }),
+      });
+
+      return null; // Can't read response in no-cors mode
+    } catch (error) {
+      console.warn("⚠️ Could not fetch blocked slots from Google Sheet:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
+  // Load appointments, time slots, and blocked slots from Google Sheet on mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsSyncingAppointments(true);
+
+      try {
+        // Fetch time slots (now organized by date)
+        const googleTimeSlots = await fetchTimeSlotsFromGoogle();
+        if (googleTimeSlots && Object.keys(googleTimeSlots).length > 0) {
+          setTimeSlotsByDate(googleTimeSlots);
+        } 
+        // Fetch blocked slots
+        const googleBlockedSlots = await fetchBlockedSlotsFromGoogle();
+        if (googleBlockedSlots) {
+          setBlockedSlots(googleBlockedSlots);
+        }
+
+        // Fetch appointments
+        const googleAppointments = await fetchAppointmentsFromGoogle();
+        if (googleAppointments) {
+          setAppointments(googleAppointments);
+          localStorage.setItem("curamentis-appointments", JSON.stringify(googleAppointments));
+        } else {
+          // Fallback to localStorage if Google Sheet sync fails
+          const stored = localStorage.getItem("curamentis-appointments");
+          if (stored) {
+            try {
+              setAppointments(JSON.parse(stored));
+            } catch (e) {
+              console.error("Failed to load appointments:", e);
+            }
           }
         }
+      } finally {
+        setIsSyncingAppointments(false);
       }
     };
 
-    loadAppointments();
+    loadData();
   }, []);
 
   // Save appointments to localStorage whenever they change
@@ -97,22 +162,41 @@ export default function AppointmentBooking() {
     localStorage.setItem("curamentis-appointments", JSON.stringify(appointments));
   }, [appointments]);
 
-  // Dates that are fully booked (all time slots taken)
+  // Refresh appointments from Google Sheet every 1 minute
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const refreshedAppointments = await fetchAppointmentsFromGoogle();
+        if (refreshedAppointments) {
+          setAppointments(refreshedAppointments);
+          localStorage.setItem("curamentis-appointments", JSON.stringify(refreshedAppointments));
+        }
+      } catch (error) {
+        console.warn("⚠️ Failed to auto-refresh appointments:", error);
+      }
+    }, 60000); // 60 seconds = 1 minute
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  // Dates that are fully booked (all time slots taken for that date)
   const fullyBookedDates = (() => {
     const dateSlotCounts: Record<string, number> = {};
     appointments.forEach(a => {
       dateSlotCounts[a.date] = (dateSlotCounts[a.date] || 0) + 1;
     });
-    // Only block date if ALL slots are taken
-    return Object.keys(dateSlotCounts).filter(
-      d => dateSlotCounts[d] >= AVAILABLE_SLOTS.length
-    );
+    // Only block date if ALL slots for that date are taken
+    return Object.keys(dateSlotCounts).filter(dateStr => {
+      const slotsForDate = getTimeSlotsForDate(new Date(dateStr));
+      return dateSlotCounts[dateStr] >= slotsForDate.length;
+    });
   })();
 
   // Check if a specific date-time slot is booked
   const isSlotBooked = (date: Date, time: string): boolean => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return appointments.some(a => a.date === dateStr && a.time === time);
+    return appointments.some(a => a.date === dateStr && a.time === time) ||
+           blockedSlots.some(b => b.date === dateStr && b.time === time);
   };
 
   // Handle date selection
@@ -130,11 +214,7 @@ export default function AppointmentBooking() {
 
   // Submit to Google Apps Script
   async function submitToGoogle(data: { name: string; mobile: string; dateTime: string }) {
-    console.log("📝 Submitting to Google Sheet:", {
-      name: data.name,
-      mobile: data.mobile,
-      dateTime: data.dateTime,
-    });
+ 
 
     try {
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -144,13 +224,13 @@ export default function AppointmentBooking() {
           "Content-Type": "text/plain",
         },
         body: JSON.stringify({
+          action: "saveAppointment",
           name: data.name,
           mobile: data.mobile,
           dateTime: data.dateTime,
         }),
       });
 
-      console.log("✅ Appointment submitted to Google Sheet!");
       return { success: true };
     } catch (error) {
       console.error("❌ Google Sheet submission error:", error);
@@ -189,18 +269,21 @@ export default function AppointmentBooking() {
       const fullDateTime = `${dateStr} ${timeStr}`;
 
       console.log("🔄 Processing appointment...");
-      console.log("   Name:", userName);
-      console.log("   Mobile:", userMobile);
-      console.log("   Date & Time:", fullDateTime);
 
-      // Submit to Google Apps Script
-      await submitToGoogle({
-        name: userName,
-        mobile: userMobile,
-        dateTime: fullDateTime,
-      });
 
-      // Add appointment to local state
+      // Try to submit to Google Apps Script, but don't fail if it doesn't work
+      try {
+        await submitToGoogle({
+          name: userName,
+          mobile: userMobile,
+          dateTime: fullDateTime,
+        });
+      } catch (googleError) {
+        console.warn("⚠️ Google Sheet submission failed, but appointment saved locally:", googleError);
+        // Continue with local saving even if Google Sheet fails
+      }
+
+      // Add appointment to local state (always happens)
       const newAppointment: Appointment = {
         id: Math.random().toString(36).slice(2),
         date: dateStr,
@@ -212,8 +295,6 @@ export default function AppointmentBooking() {
       setAppointments([...appointments, newAppointment]);
       setBookingSuccess(true);
       setShowPopup(true);
-
-      console.log("✨ Appointment completed! Data saved to spreadsheet.");
 
       // Reset form
       setTimeout(() => {
@@ -245,6 +326,19 @@ export default function AppointmentBooking() {
 
   return (
     <section id="appointment" className="py-24 bg-background relative overflow-hidden">
+      {isSyncingAppointments && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm">
+          <div className="rounded-3xl bg-white/95 border border-slate-200/80 p-8 flex flex-col items-center gap-4 shadow-2xl">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary text-3xl animate-spin">
+              ⏳
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-foreground">Syncing appointments details</p>
+              <p className="text-sm text-muted-foreground mt-1">Please wait while we load your latest booking data.</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Decorative background elements */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-10 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -324,7 +418,7 @@ export default function AppointmentBooking() {
                   </div>
                   <div className="ml-11">
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-                      {AVAILABLE_SLOTS.map(time => {
+                      {getTimeSlotsForDate(selectedDate).map(time => {
                         const isBooked = isSlotBooked(selectedDate, time);
                         const isSelected = selectedTime === time;
                         return (
@@ -456,7 +550,7 @@ export default function AppointmentBooking() {
                   </li>
                   <li className="flex items-start gap-3 group">
                     <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>
-                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">Flexible Scheduling</span> – Choose from 12 time slots daily</span>
+                    <span className="group-hover:text-foreground transition-colors"><span className="font-semibold text-foreground">Flexible Scheduling</span> – Custom time slots per date</span>
                   </li>
                   <li className="flex items-start gap-3 group">
                     <span className="text-primary font-bold text-lg leading-none mt-0.5">✓</span>

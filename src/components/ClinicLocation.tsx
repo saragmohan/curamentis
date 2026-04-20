@@ -17,7 +17,7 @@ export default function ClinicLocation() {
           </div>
           <h2 className="text-4xl md:text-5xl font-light text-foreground mb-4">
             Visit Our
-            <span className="block text-primary font-semibold">Clinic</span>
+            <span className="block text-primary font-semibold">Center</span>
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
             Located in a peaceful, welcoming environment designed for your comfort and healing.

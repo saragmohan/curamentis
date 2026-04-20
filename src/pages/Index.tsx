@@ -40,9 +40,9 @@ const Index = () => {
           <ClinicLocation />
         </section>
 
-        <section id="contact">
+        {/* <section id="contact">
           <Contact />
-        </section>
+        </section> */}
       </main>
 
       {/* Footer */}
