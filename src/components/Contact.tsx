@@ -13,37 +13,16 @@ const Contact = () => {
     message: "",
   });
 
-  // --- added/changed code: Google Form submission ---
-  // Replace FORM_ID and entry IDs with your Google Form values
-  const GOOGLE_FORM_ID =
-    "1FAIpQLSe4FVEdZxkJ1xPdKBRJMuNwPO3q6BhvZkJT3uTE0OUFExH86w";
-  const GOOGLE_FORM_ACTION = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`;
+  // Backend configuration for contact
+  const BACKEND_URL = "https://curamentis-api.onrender.com/api/contact";
 
-  const GFORM = {
-    firstName: "entry.2005620554", // maps to First name field (Test in prefill)
-    lastName: "entry.490521240", // maps to Last name (Name)
-    email: "entry.1045781291", // maps to Email (test@gmail.com)
-    phone: "entry.1065046570", // maps to Phone (123465789)
-    message: "entry.1166974658", // maps to Message (test message)
-  };
-
-  const submitToGoogle = async (data: typeof formData) => {
-    const payload = new URLSearchParams();
-    payload.append(GFORM.firstName, data.firstName);
-    payload.append(GFORM.lastName, data.lastName);
-    payload.append(GFORM.email, data.email);
-    payload.append(GFORM.phone, data.phone);
-    payload.append(GFORM.message, data.message);
-
-    // Google Forms doesn't allow CORS, so we use no-cors mode.
-    // The request will succeed but response will be opaque — handle accordingly.
-    return fetch(GOOGLE_FORM_ACTION, {
+  const submitToBackend = async (data: typeof formData) => {
+    return fetch(BACKEND_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: payload.toString(),
+      body: JSON.stringify(data),
     });
   };
 
@@ -57,8 +36,9 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await submitToGoogle(formData);
-      // treat as success (no-cors gives opaque response)
+      const response = await submitToBackend(formData);
+      if (!response.ok) throw new Error("Network response was not ok");
+      
       alert("Message submitted. Thank you!");
       setFormData({
         firstName: "",
