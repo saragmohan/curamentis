@@ -12,9 +12,8 @@ const AVAILABLE_SLOTS = [
   "13:00", "15:00", "17:00", "19:00"
 ];
 
-// Google Apps Script configuration for appointments
-// Direct API endpoint to save data to Google Sheet
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbywMPheoQOLxX_gRq1yZ-pHXhKuN_FuHjoDNHRkaVpX_mzswwbdgotZM6Uy0KhGrJev/exec";
+// Backend configuration for appointments
+const BACKEND_URL = "http://localhost:8081/api/appointments";
 function getToday() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -47,9 +46,7 @@ export default function AppointmentBooking() {
   async function fetchAppointmentsFromGoogle() {
     try {
       console.log("📡 Syncing appointments...");
-      const response = await fetch(
-      `${GOOGLE_APPS_SCRIPT_URL}?action=getAppointments`
-      );
+      const response = await fetch(BACKEND_URL);
 
     const data = await response.json();
     return data.appointments || [];
@@ -64,9 +61,7 @@ export default function AppointmentBooking() {
   async function fetchTimeSlotsFromGoogle() {
     try {
 
-      const response = await fetch(
-        `${GOOGLE_APPS_SCRIPT_URL}?action=getTimeSlots`
-      );
+      const response = await fetch(`${BACKEND_URL}/time-slots`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -95,23 +90,16 @@ export default function AppointmentBooking() {
     return availableSlots;
   };
 
-  // Fetch blocked slots from Google Sheet
+  // Fetch blocked slots from backend
   async function fetchBlockedSlotsFromGoogle() {
     try {
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: JSON.stringify({
-          action: "getBlockedSlots"
-        }),
-      });
-
-      return null; // Can't read response in no-cors mode
+      const response = await fetch(`${BACKEND_URL}/blocked-slots`);
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
     } catch (error) {
-      console.warn("⚠️ Could not fetch blocked slots from Google Sheet:", error instanceof Error ? error.message : error);
+      console.warn("⚠️ Could not fetch blocked slots from backend:", error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -181,14 +169,19 @@ export default function AppointmentBooking() {
 
   // Dates that are fully booked (all time slots taken for that date)
   const fullyBookedDates = (() => {
-    const dateSlotCounts: Record<string, number> = {};
-    appointments.forEach(a => {
-      dateSlotCounts[a.date] = (dateSlotCounts[a.date] || 0) + 1;
-    });
-    // Only block date if ALL slots for that date are taken
-    return Object.keys(dateSlotCounts).filter(dateStr => {
+    const datesToCheck = new Set<string>();
+    appointments.forEach(a => datesToCheck.add(a.date));
+    blockedSlots.forEach(b => datesToCheck.add(b.date));
+    
+    return Array.from(datesToCheck).filter(dateStr => {
       const slotsForDate = getTimeSlotsForDate(new Date(dateStr));
-      return dateSlotCounts[dateStr] >= slotsForDate.length;
+      // A date is fully booked if there are NO available slots that are NOT booked/blocked
+      const hasAvailableSlot = slotsForDate.some(time => {
+        const isBooked = appointments.some(a => a.date === dateStr && a.time === time) ||
+                         blockedSlots.some(b => b.date === dateStr && b.time === time);
+        return !isBooked;
+      });
+      return !hasAvailableSlot;
     });
   })();
 
@@ -217,14 +210,12 @@ export default function AppointmentBooking() {
  
 
     try {
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      const response = await fetch(BACKEND_URL, {
         method: "POST",
-        mode: "no-cors",
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: "saveAppointment",
           name: data.name,
           mobile: data.mobile,
           dateTime: data.dateTime,
@@ -296,13 +287,9 @@ export default function AppointmentBooking() {
       setBookingSuccess(true);
       setShowPopup(true);
 
-      // Reset form
-      setTimeout(() => {
-        setUserName("");
-        setUserMobile("");
-        setSelectedDate(null);
-        setSelectedTime(null);
-      }, 1500);
+      // We do not reset the form here anymore.
+      // It is reset when the popup is closed, so the WhatsApp message can access the state variables.
+
     } catch (err) {
       console.error("Booking error:", err);
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -323,6 +310,15 @@ export default function AppointmentBooking() {
 
   const totalSteps = 4;
   const stepsCompleted = getStepsCompleted();
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
+    // Reset form when popup is closed
+    setUserName("");
+    setUserMobile("");
+    setSelectedDate(null);
+    setSelectedTime(null);
+  };
 
   return (
     <section id="appointment" className="py-24 bg-background relative overflow-hidden">
@@ -568,7 +564,7 @@ export default function AppointmentBooking() {
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div 
             className="bg-black/30 backdrop-blur-sm absolute inset-0" 
-            onClick={() => setShowPopup(false)} 
+            onClick={handleClosePopup} 
           />
           <Card className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl p-10 z-10 max-w-sm w-full text-center animate-fade-in relative overflow-hidden">
             {/* Success animation background */}
@@ -609,16 +605,31 @@ export default function AppointmentBooking() {
 
               <div className="space-y-3 mb-6">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  A confirmation has been sent to your mobile number. If you need to reschedule, please contact us at least 24 hours in advance.
+                  If you need to reschedule, please contact us at least 24 hours in advance.
                 </p>
               </div>
               
-              <Button
-                onClick={() => setShowPopup(false)}
-                className="w-full bg-gradient-primary hover:shadow-xl text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-95"
-              >
-                Done
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={() => {
+                    const message = `Hello Cura Mentis! I have just booked a new appointment.\n*Name:* ${userName}\n*Mobile:* ${userMobile}\n*Date:* ${selectedDate ? format(selectedDate, "MMM dd, yyyy") : ""}\n*Time:* ${selectedTime}`;
+                    const encoded = encodeURIComponent(message);
+                    window.open(`https://wa.me/917012241360?text=${encoded}`, "_blank");
+                    handleClosePopup();
+                  }}
+                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-102 active:scale-95"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z" /><path d="M17.03 14.47c-.27-.14-1.59-.78-1.84-.86-.24-.08-.42-.14-.6.14-.17.27-.66.86-.82 1.04-.15.18-.31.2-.57.07-.26-.14-1.09-.4-2.07-1.28-.77-.69-1.29-1.54-1.44-1.8-.15-.27-.02-.41.11-.55.11-.11.26-.28.39-.42.13-.14.17-.24.26-.4.09-.17.05-.32-.02-.45-.07-.13-.6-1.44-.82-1.96-.22-.52-.44-.45-.6-.46l-.51-.01c-.17 0-.45.06-.69.32-.24.26-.92.9-.92 2.19 0 1.29.94 2.54 1.07 2.72.13.18 1.86 2.86 4.51 3.9 1.87.8 2.55.86 3.47.72.53-.08 1.59-.65 1.81-1.28.22-.63.22-1.17.15-1.28-.07-.11-.25-.17-.52-.3z" /></svg>
+                  Notify Clinic on WhatsApp
+                </Button>
+                <Button
+                  onClick={handleClosePopup}
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:bg-slate-100"
+                >
+                  Dismiss
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

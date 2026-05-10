@@ -46,7 +46,7 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="py-12 bg-primary/5 border-t border-border/30">
+      <footer id="contact" className="py-12 bg-primary/5 border-t border-border/30">
         <div className="container mx-auto px-6 text-center">
           <div className="mb-6">
             <h3 className="text-xl font-medium text-primary mb-2">
@@ -84,14 +84,23 @@ const Index = () => {
             </a>
           </div>
 
-          <div className="border-t border-border/30 pt-6">
-            <p className="text-muted-foreground text-xs">
-              © 2026 Cura Mentis. All rights reserved.
-              <span className="block mt-1">
-                Confidential mental health services in a safe, supportive
-                environment.
-              </span>
-            </p>
+          <div className="border-t border-border/30 pt-6 grid grid-cols-1 md:grid-cols-3 items-center gap-4">
+            <div className="flex justify-center md:justify-start order-2 md:order-1">
+              <a href="/admin" className="text-xs font-medium text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1 w-fit">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Login
+              </a>
+            </div>
+            <div className="text-center order-1 md:order-2">
+              <p className="text-muted-foreground text-xs">
+                © 2026 Cura Mentis. All rights reserved.
+                <span className="block mt-1">
+                  Confidential mental health services in a safe, supportive
+                  environment.
+                </span>
+              </p>
+            </div>
+            <div className="hidden md:block order-3"></div>
           </div>
         </div>
       </footer>
