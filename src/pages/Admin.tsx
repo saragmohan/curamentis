@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-const BACKEND_URL = "http://localhost:8081/api";
+const BACKEND_URL = "https://curamentis-api.onrender.com/api";
 
 interface Appointment {
   id: string;

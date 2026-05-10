@@ -14,7 +14,7 @@ const Contact = () => {
   });
 
   // Backend configuration for contact
-  const BACKEND_URL = "http://localhost:8081/api/contact";
+  const BACKEND_URL = "https://curamentis-api.onrender.com/api/contact";
 
   const submitToBackend = async (data: typeof formData) => {
     return fetch(BACKEND_URL, {

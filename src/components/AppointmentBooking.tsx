@@ -13,7 +13,7 @@ const AVAILABLE_SLOTS = [
 ];
 
 // Backend configuration for appointments
-const BACKEND_URL = "http://localhost:8081/api/appointments";
+const BACKEND_URL = "https://curamentis-api.onrender.com/api/appointments";
 function getToday() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -167,30 +167,41 @@ export default function AppointmentBooking() {
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
-  // Dates that are fully booked (all time slots taken for that date)
+  // Check if a specific date-time slot is booked or in the past
+  const isSlotBooked = (date: Date, time: string): boolean => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    
+    // Check if the slot is in the past
+    const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+    if (isToday) {
+      const currentTime = new Date();
+      const timeParts = time.split(':');
+      const slotTime = new Date(date);
+      slotTime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+      if (slotTime < currentTime) return true; // Disable past slots
+    }
+
+    return appointments.some(a => a.date === dateStr && a.time === time) ||
+           blockedSlots.some(b => b.date === dateStr && b.time === time);
+  };
+
+  // Dates that are fully booked (all time slots taken or passed for that date)
   const fullyBookedDates = (() => {
     const datesToCheck = new Set<string>();
+    // Always check today in case all slots have passed
+    datesToCheck.add(format(new Date(), "yyyy-MM-dd"));
     appointments.forEach(a => datesToCheck.add(a.date));
     blockedSlots.forEach(b => datesToCheck.add(b.date));
     
     return Array.from(datesToCheck).filter(dateStr => {
       const slotsForDate = getTimeSlotsForDate(new Date(dateStr));
-      // A date is fully booked if there are NO available slots that are NOT booked/blocked
+      // A date is fully booked if there are NO available slots
       const hasAvailableSlot = slotsForDate.some(time => {
-        const isBooked = appointments.some(a => a.date === dateStr && a.time === time) ||
-                         blockedSlots.some(b => b.date === dateStr && b.time === time);
-        return !isBooked;
+        return !isSlotBooked(new Date(dateStr), time);
       });
       return !hasAvailableSlot;
     });
   })();
-
-  // Check if a specific date-time slot is booked
-  const isSlotBooked = (date: Date, time: string): boolean => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    return appointments.some(a => a.date === dateStr && a.time === time) ||
-           blockedSlots.some(b => b.date === dateStr && b.time === time);
-  };
 
   // Handle date selection
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
