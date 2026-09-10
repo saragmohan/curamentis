@@ -104,46 +104,53 @@ export default function AppointmentBooking() {
     }
   }
 
-  // Load appointments, time slots, and blocked slots from Google Sheet on mount
+  // Load appointments, time slots, and blocked slots from backend on mount
   useEffect(() => {
     const loadData = async () => {
+      // 1. Immediately load local fallback data so UI is instantly ready
+      const stored = localStorage.getItem("curamentis-appointments");
+      if (stored) {
+        try {
+          setAppointments(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to load appointments:", e);
+        }
+      }
+
       setIsSyncingAppointments(true);
 
-      try {
-        // Fetch time slots (now organized by date)
-        const googleTimeSlots = await fetchTimeSlotsFromGoogle();
-        if (googleTimeSlots && Object.keys(googleTimeSlots).length > 0) {
-          setTimeSlotsByDate(googleTimeSlots);
-        } 
-        // Fetch blocked slots
-        const googleBlockedSlots = await fetchBlockedSlotsFromGoogle();
-        if (googleBlockedSlots) {
-          setBlockedSlots(googleBlockedSlots);
-        }
+      // 2. Safety timeout: unblock UI overlay after 4 seconds if backend is cold-starting
+      const timeoutId = setTimeout(() => {
+        setIsSyncingAppointments(false);
+      }, 4000);
 
-        // Fetch appointments
-        const googleAppointments = await fetchAppointmentsFromGoogle();
-        if (googleAppointments) {
-          setAppointments(googleAppointments);
-          localStorage.setItem("curamentis-appointments", JSON.stringify(googleAppointments));
-        } else {
-          // Fallback to localStorage if Google Sheet sync fails
-          const stored = localStorage.getItem("curamentis-appointments");
-          if (stored) {
-            try {
-              setAppointments(JSON.parse(stored));
-            } catch (e) {
-              console.error("Failed to load appointments:", e);
-            }
-          }
+      try {
+        // 3. Fetch time slots, blocked slots, and appointments concurrently in parallel
+        const [timeSlotsRes, blockedSlotsRes, appointmentsRes] = await Promise.allSettled([
+          fetchTimeSlotsFromGoogle(),
+          fetchBlockedSlotsFromGoogle(),
+          fetchAppointmentsFromGoogle(),
+        ]);
+
+        if (timeSlotsRes.status === "fulfilled" && timeSlotsRes.value && Object.keys(timeSlotsRes.value).length > 0) {
+          setTimeSlotsByDate(timeSlotsRes.value);
+        }
+        if (blockedSlotsRes.status === "fulfilled" && blockedSlotsRes.value) {
+          setBlockedSlots(blockedSlotsRes.value);
+        }
+        if (appointmentsRes.status === "fulfilled" && appointmentsRes.value) {
+          setAppointments(appointmentsRes.value);
+          localStorage.setItem("curamentis-appointments", JSON.stringify(appointmentsRes.value));
         }
       } finally {
+        clearTimeout(timeoutId);
         setIsSyncingAppointments(false);
       }
     };
 
     loadData();
   }, []);
+
 
   // Save appointments to localStorage whenever they change
   useEffect(() => {
