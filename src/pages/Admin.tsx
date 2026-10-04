@@ -28,10 +28,39 @@ export default function Admin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"appointments" | "slots">("appointments");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [timeSlots, setTimeSlots] = useState<{ id: string; date: string; availableTimes: string[] }[]>([]);
+
+  const getSortedAppointments = (list: Appointment[], option: "newest" | "oldest" | "name") => {
+    return [...list].sort((a, b) => {
+      if (option === "name") {
+        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+      }
+
+      const getTime = (app: Appointment) => {
+        if (app.date) {
+          const timeStr = app.time ? app.time : "00:00";
+          const parsed = new Date(`${app.date}T${timeStr}`).getTime();
+          if (!isNaN(parsed)) return parsed;
+        }
+        return 0;
+      };
+
+      const timeA = getTime(a);
+      const timeB = getTime(b);
+
+      if (timeA !== timeB) {
+        return option === "newest" ? timeB - timeA : timeA - timeB;
+      }
+
+      const idA = a.id || "";
+      const idB = b.id || "";
+      return option === "newest" ? idB.localeCompare(idA) : idA.localeCompare(idB);
+    });
+  };
   
   const [blockDate, setBlockDate] = useState("");
   const [blockTime, setBlockTime] = useState("");
@@ -93,8 +122,7 @@ export default function Admin() {
     doc.text("Booked Appointments", 14, 15);
     
     const tableColumn = ["Date", "Time", "Patient Name", "Mobile"];
-    const tableRows = appointments
-      .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())
+    const tableRows = getSortedAppointments(appointments, sortBy)
       .map(app => [app.date, app.time, app.name, app.mobile]);
       
     autoTable(doc, {
@@ -107,8 +135,7 @@ export default function Admin() {
   };
 
   const downloadExcel = () => {
-    const tableData = appointments
-      .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())
+    const tableData = getSortedAppointments(appointments, sortBy)
       .map(app => ({
         "Date": app.date,
         "Time": app.time,
@@ -121,6 +148,7 @@ export default function Admin() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
     XLSX.writeFile(workbook, `Appointments_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
   };
+
 
   const fetchBlockedSlots = async () => {
     const token = localStorage.getItem("adminToken");
@@ -273,7 +301,22 @@ export default function Admin() {
           <Card className="p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-xl font-bold">All Booked Appointments</h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                  <label htmlFor="sort-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Sort:
+                  </label>
+                  <select
+                    id="sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "name")}
+                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="newest">Newest → Oldest</option>
+                    <option value="oldest">Oldest → Newest</option>
+                    <option value="name">Name</option>
+                  </select>
+                </div>
                 <Button variant="outline" size="sm" onClick={downloadExcel} className="gap-2 text-green-700 hover:text-green-800 hover:bg-green-50 border-green-200">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   Excel
@@ -299,7 +342,7 @@ export default function Admin() {
                   {appointments.length === 0 ? (
                     <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No appointments found.</td></tr>
                   ) : (
-                    appointments.sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()).map(app => (
+                    getSortedAppointments(appointments, sortBy).map(app => (
                       <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 font-medium text-primary">{app.date}</td>
                         <td className="p-4">{app.time}</td>
@@ -318,6 +361,7 @@ export default function Admin() {
             </div>
           </Card>
         )}
+
 
         {activeTab === "slots" && (
           <div className="space-y-8">
