@@ -337,7 +337,55 @@ export default function Admin() {
                 </Button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View (Visible on screens < md) */}
+            <div className="md:hidden space-y-4">
+              {appointments.length === 0 ? (
+                <p className="text-center text-muted-foreground p-4">No appointments found.</p>
+              ) : (
+                getSortedAppointments(appointments, sortBy).map(app => (
+                  <div key={app.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 shadow-sm space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-slate-800 text-base">{app.name}</h3>
+                        <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1">
+                          <span>📞</span> {app.mobile}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full">
+                        {app.date}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center text-xs text-slate-600 font-medium bg-white p-2.5 rounded-lg border border-slate-100">
+                      <span>⏰ Time Slot: <strong className="text-slate-800">{app.time}</strong></span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 border-emerald-200 font-medium py-2 text-xs"
+                        onClick={() => handleSendWhatsAppReminder(app)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z"/></svg>
+                        Send WhatsApp Reminder
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs px-3"
+                        onClick={() => handleDeleteAppointment(app.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table View (Visible on screens >= md) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-100 text-slate-600">
                   <tr>
@@ -380,6 +428,7 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+
           </Card>
         )}
 
