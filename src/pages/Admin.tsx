@@ -279,40 +279,44 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-12">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex-wrap gap-4">
-          <h1 className="text-3xl font-bold text-foreground">Curamentis Dashboard</h1>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary gap-2" onClick={() => window.location.href = '/'}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    <div className="min-h-screen bg-slate-50 p-3.5 sm:p-6 md:p-12">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        <div className="flex justify-between items-center bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 flex-wrap gap-4">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">Curamentis Dashboard</h1>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary gap-1.5 text-xs sm:text-sm" onClick={() => window.location.href = '/'}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
               Home
             </Button>
-            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={handleLogout}>Logout</Button>
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-2 sm:gap-4">
           <Button 
+            size="sm"
             variant={activeTab === "appointments" ? "default" : "outline"} 
             onClick={() => setActiveTab("appointments")}
+            className="text-xs sm:text-sm flex-1 sm:flex-initial"
           >
             Appointments
           </Button>
           <Button 
+            size="sm"
             variant={activeTab === "slots" ? "default" : "outline"} 
             onClick={() => setActiveTab("slots")}
+            className="text-xs sm:text-sm flex-1 sm:flex-initial"
           >
             Slot Management
           </Button>
         </div>
 
         {activeTab === "appointments" && (
-          <Card className="p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h2 className="text-xl font-bold">All Booked Appointments</h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+          <Card className="p-3.5 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 sm:mb-6 gap-3 sm:gap-4">
+              <h2 className="text-lg sm:text-xl font-bold">All Booked Appointments</h2>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm text-xs sm:text-sm flex-1 sm:flex-initial justify-between">
                   <label htmlFor="sort-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Sort:
                   </label>
@@ -320,43 +324,46 @@ export default function Admin() {
                     id="sort-select"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "name")}
-                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+                    className="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
                   >
                     <option value="newest">Newest → Oldest</option>
                     <option value="oldest">Oldest → Newest</option>
                     <option value="name">Name</option>
                   </select>
                 </div>
-                <Button variant="outline" size="sm" onClick={downloadExcel} className="gap-2 text-green-700 hover:text-green-800 hover:bg-green-50 border-green-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <Button variant="outline" size="sm" onClick={downloadExcel} className="gap-1.5 text-green-700 hover:text-green-800 hover:bg-green-50 border-green-200 text-xs flex-1 sm:flex-initial">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   Excel
                 </Button>
-                <Button variant="outline" size="sm" onClick={downloadPDF} className="gap-2 text-red-700 hover:text-red-800 hover:bg-red-50 border-red-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <Button variant="outline" size="sm" onClick={downloadPDF} className="gap-1.5 text-red-700 hover:text-red-800 hover:bg-red-50 border-red-200 text-xs flex-1 sm:flex-initial">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   PDF
                 </Button>
               </div>
             </div>
             {/* Mobile Card View (Visible on screens < md) */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-3">
               {appointments.length === 0 ? (
-                <p className="text-center text-muted-foreground p-4">No appointments found.</p>
+                <p className="text-center text-muted-foreground p-4 text-sm">No appointments found.</p>
               ) : (
                 getSortedAppointments(appointments, sortBy).map(app => (
-                  <div key={app.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 shadow-sm space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-slate-800 text-base">{app.name}</h3>
-                        <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1">
+                  <div key={app.id} className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3.5 sm:p-4 shadow-sm space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-slate-900 text-base truncate">{app.name}</h3>
+                        <a 
+                          href={`tel:${app.mobile}`} 
+                          className="text-xs font-medium text-slate-500 hover:text-primary flex items-center gap-1.5 mt-1 transition-colors"
+                        >
                           <span>📞</span> {app.mobile}
-                        </p>
+                        </a>
                       </div>
-                      <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full">
+                      <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full shrink-0">
                         {app.date}
                       </span>
                     </div>
 
-                    <div className="flex items-center text-xs text-slate-600 font-medium bg-white p-2.5 rounded-lg border border-slate-100">
+                    <div className="flex items-center text-xs text-slate-600 font-medium bg-white p-2.5 rounded-lg border border-slate-100/80">
                       <span>⏰ Time Slot: <strong className="text-slate-800">{app.time}</strong></span>
                     </div>
 
@@ -367,7 +374,7 @@ export default function Admin() {
                         className="flex-1 gap-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 border-emerald-200 font-medium py-2 text-xs"
                         onClick={() => handleSendWhatsAppReminder(app)}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600 shrink-0"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z"/></svg>
                         Send WhatsApp Reminder
                       </Button>
                       <Button 
@@ -431,6 +438,7 @@ export default function Admin() {
 
           </Card>
         )}
+
 
 
 
