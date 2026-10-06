@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import logo from "../../public/Assets/logo_curamentis.png";
+import logo from "../../public/assets/logo_curamentis.png";
+
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -72,11 +73,15 @@ const Navigation = () => {
             <Button
               size="sm"
               className="bg-gradient-primary hover:shadow-medium transition-all duration-300 px-6"
-              onClick={() =>
-                document
-                  .getElementById("appointment")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
+              onClick={() => {
+                const el = document.getElementById("appointment");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                  window.history.pushState(null, "", "#appointment");
+                } else {
+                  window.location.href = "/#appointment";
+                }
+              }}
             >
               Book Session
             </Button>
@@ -139,9 +144,13 @@ const Navigation = () => {
                 size="sm"
                 className="bg-gradient-primary hover:shadow-medium transition-all duration-300 w-fit"
                 onClick={() => {
-                  document
-                    .getElementById("contact")
-                    ?.scrollIntoView({ behavior: "smooth" });
+                  const el = document.getElementById("appointment");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth" });
+                    window.history.pushState(null, "", "#appointment");
+                  } else {
+                    window.location.href = "/#appointment";
+                  }
                   setIsMenuOpen(false);
                 }}
               >
@@ -150,6 +159,7 @@ const Navigation = () => {
             </div>
           </div>
         )}
+
       </div>
     </nav>
   );

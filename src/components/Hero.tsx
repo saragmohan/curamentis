@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import logo from "../../public/Assets/logo_curamentis.png";
-import heroImage from "../../public/Assets/therapy-room.jpg";
+import logo from "../../public/assets/logo_curamentis.png";
+import heroImage from "../../public/assets/therapy-room.jpg";
+
 
 const Hero = () => {
   return (

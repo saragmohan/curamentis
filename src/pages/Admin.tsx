@@ -28,10 +28,39 @@ export default function Admin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"appointments" | "slots">("appointments");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [timeSlots, setTimeSlots] = useState<{ id: string; date: string; availableTimes: string[] }[]>([]);
+
+  const getSortedAppointments = (list: Appointment[], option: "newest" | "oldest" | "name") => {
+    return [...list].sort((a, b) => {
+      if (option === "name") {
+        return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+      }
+
+      const getTime = (app: Appointment) => {
+        if (app.date) {
+          const timeStr = app.time ? app.time : "00:00";
+          const parsed = new Date(`${app.date}T${timeStr}`).getTime();
+          if (!isNaN(parsed)) return parsed;
+        }
+        return 0;
+      };
+
+      const timeA = getTime(a);
+      const timeB = getTime(b);
+
+      if (timeA !== timeB) {
+        return option === "newest" ? timeB - timeA : timeA - timeB;
+      }
+
+      const idA = a.id || "";
+      const idB = b.id || "";
+      return option === "newest" ? idB.localeCompare(idA) : idA.localeCompare(idB);
+    });
+  };
   
   const [blockDate, setBlockDate] = useState("");
   const [blockTime, setBlockTime] = useState("");
@@ -88,13 +117,22 @@ export default function Admin() {
     }
   };
 
+  const handleSendWhatsAppReminder = (app: Appointment) => {
+    let cleanMobile = app.mobile.replace(/\D/g, '');
+    if (cleanMobile.length === 10) {
+      cleanMobile = `91${cleanMobile}`;
+    }
+    const message = `Hello ${app.name},\n\nThis is a gentle reminder from Cura Mentis for your consultation session scheduled on ${app.date} at ${app.time}.\n\nPlease let us know if you have any questions.\n\nWarm regards,\nCura Mentis`;
+    const whatsappUrl = `https://wa.me/${cleanMobile}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   const downloadPDF = () => {
     const doc = new jsPDF();
     doc.text("Booked Appointments", 14, 15);
     
     const tableColumn = ["Date", "Time", "Patient Name", "Mobile"];
-    const tableRows = appointments
-      .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())
+    const tableRows = getSortedAppointments(appointments, sortBy)
       .map(app => [app.date, app.time, app.name, app.mobile]);
       
     autoTable(doc, {
@@ -107,8 +145,7 @@ export default function Admin() {
   };
 
   const downloadExcel = () => {
-    const tableData = appointments
-      .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime())
+    const tableData = getSortedAppointments(appointments, sortBy)
       .map(app => ({
         "Date": app.date,
         "Time": app.time,
@@ -121,6 +158,7 @@ export default function Admin() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments");
     XLSX.writeFile(workbook, `Appointments_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
   };
+
 
   const fetchBlockedSlots = async () => {
     const token = localStorage.getItem("adminToken");
@@ -273,7 +311,22 @@ export default function Admin() {
           <Card className="p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-xl font-bold">All Booked Appointments</h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                  <label htmlFor="sort-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Sort:
+                  </label>
+                  <select
+                    id="sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "name")}
+                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value="newest">Newest → Oldest</option>
+                    <option value="oldest">Oldest → Newest</option>
+                    <option value="name">Name</option>
+                  </select>
+                </div>
                 <Button variant="outline" size="sm" onClick={downloadExcel} className="gap-2 text-green-700 hover:text-green-800 hover:bg-green-50 border-green-200">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   Excel
@@ -299,13 +352,23 @@ export default function Admin() {
                   {appointments.length === 0 ? (
                     <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No appointments found.</td></tr>
                   ) : (
-                    appointments.sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()).map(app => (
+                    getSortedAppointments(appointments, sortBy).map(app => (
                       <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 font-medium text-primary">{app.date}</td>
                         <td className="p-4">{app.time}</td>
                         <td className="p-4 font-medium">{app.name}</td>
                         <td className="p-4">{app.mobile}</td>
-                        <td className="p-4">
+                        <td className="p-4 flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200 font-medium"
+                            onClick={() => handleSendWhatsAppReminder(app)}
+                            title="Send WhatsApp Reminder"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z"/></svg>
+                            Reminder
+                          </Button>
                           <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDeleteAppointment(app.id)}>
                             Delete
                           </Button>
@@ -318,6 +381,8 @@ export default function Admin() {
             </div>
           </Card>
         )}
+
+
 
         {activeTab === "slots" && (
           <div className="space-y-8">

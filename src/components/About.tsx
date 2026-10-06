@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
-import profilePhoto from "../../public/Assets/Sijisha_Sacheendran.jpg";
+import profilePhoto from "../../public/assets/Sijisha_Sacheendran.jpg";
+
 
 const About = () => {
   return (

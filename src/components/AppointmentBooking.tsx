@@ -104,46 +104,53 @@ export default function AppointmentBooking() {
     }
   }
 
-  // Load appointments, time slots, and blocked slots from Google Sheet on mount
+  // Load appointments, time slots, and blocked slots from backend on mount
   useEffect(() => {
     const loadData = async () => {
+      // 1. Immediately load local fallback data so UI is instantly ready
+      const stored = localStorage.getItem("curamentis-appointments");
+      if (stored) {
+        try {
+          setAppointments(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to load appointments:", e);
+        }
+      }
+
       setIsSyncingAppointments(true);
 
-      try {
-        // Fetch time slots (now organized by date)
-        const googleTimeSlots = await fetchTimeSlotsFromGoogle();
-        if (googleTimeSlots && Object.keys(googleTimeSlots).length > 0) {
-          setTimeSlotsByDate(googleTimeSlots);
-        } 
-        // Fetch blocked slots
-        const googleBlockedSlots = await fetchBlockedSlotsFromGoogle();
-        if (googleBlockedSlots) {
-          setBlockedSlots(googleBlockedSlots);
-        }
+      // 2. Safety timeout: unblock UI overlay after 4 seconds if backend is cold-starting
+      const timeoutId = setTimeout(() => {
+        setIsSyncingAppointments(false);
+      }, 4000);
 
-        // Fetch appointments
-        const googleAppointments = await fetchAppointmentsFromGoogle();
-        if (googleAppointments) {
-          setAppointments(googleAppointments);
-          localStorage.setItem("curamentis-appointments", JSON.stringify(googleAppointments));
-        } else {
-          // Fallback to localStorage if Google Sheet sync fails
-          const stored = localStorage.getItem("curamentis-appointments");
-          if (stored) {
-            try {
-              setAppointments(JSON.parse(stored));
-            } catch (e) {
-              console.error("Failed to load appointments:", e);
-            }
-          }
+      try {
+        // 3. Fetch time slots, blocked slots, and appointments concurrently in parallel
+        const [timeSlotsRes, blockedSlotsRes, appointmentsRes] = await Promise.allSettled([
+          fetchTimeSlotsFromGoogle(),
+          fetchBlockedSlotsFromGoogle(),
+          fetchAppointmentsFromGoogle(),
+        ]);
+
+        if (timeSlotsRes.status === "fulfilled" && timeSlotsRes.value && Object.keys(timeSlotsRes.value).length > 0) {
+          setTimeSlotsByDate(timeSlotsRes.value);
+        }
+        if (blockedSlotsRes.status === "fulfilled" && blockedSlotsRes.value) {
+          setBlockedSlots(blockedSlotsRes.value);
+        }
+        if (appointmentsRes.status === "fulfilled" && appointmentsRes.value) {
+          setAppointments(appointmentsRes.value);
+          localStorage.setItem("curamentis-appointments", JSON.stringify(appointmentsRes.value));
         }
       } finally {
+        clearTimeout(timeoutId);
         setIsSyncingAppointments(false);
       }
     };
 
     loadData();
   }, []);
+
 
   // Save appointments to localStorage whenever they change
   useEffect(() => {
@@ -352,25 +359,25 @@ export default function AppointmentBooking() {
         <div className="absolute bottom-10 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: "1s"}} />
       </div>
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12 animate-fade-in">
-            <div className="inline-block mb-4 px-4 py-2 bg-primary/10 rounded-full">
-              <span className="text-sm font-semibold text-primary">✨ Easy & Convenient</span>
+          <div className="text-center mb-8 sm:mb-12 animate-fade-in">
+            <div className="inline-block mb-3 sm:mb-4 px-4 py-2 bg-primary/10 rounded-full">
+              <span className="text-xs sm:text-sm font-semibold text-primary">✨ Easy & Convenient</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-light text-foreground mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-light text-foreground mb-3 sm:mb-4">
               Book Your
               <span className="block text-primary font-semibold">Appointment</span>
             </h2>
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto px-2">
               Take the first step towards your wellness journey. Select your preferred date and time slots at your convenience.
             </p>
           </div>
 
           {/* Progress Indicator */}
-          <div className="mb-8 animate-fade-in">
-            <div className="flex items-center justify-between mb-3">
+          <div className="mb-6 sm:mb-8 animate-fade-in px-1">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
               <span className="text-xs font-semibold text-primary uppercase tracking-wider">Progress</span>
               <span className="text-xs font-medium text-muted-foreground">{stepsCompleted} of {totalSteps}</span>
             </div>
@@ -383,22 +390,22 @@ export default function AppointmentBooking() {
           </div>
 
           {/* Booking Form Card */}
-          <Card className="bg-white/40 backdrop-blur-xl border border-white/50 shadow-2xl p-8 animate-fade-in relative overflow-hidden group">
+          <Card className="bg-white/40 backdrop-blur-xl border border-white/50 shadow-2xl p-5 sm:p-8 animate-fade-in relative overflow-hidden group">
             {/* Glassmorphism shine effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
             
-            <div className="space-y-7 relative z-10">
+            <div className="space-y-6 sm:space-y-7 relative z-10">
               {/* Step 1: Date Selection */}
               <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                <div className="flex items-center justify-center sm:justify-start gap-3 mb-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold shrink-0">
                     1
                   </div>
                   <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <span>📅</span> Select Your Date
                   </label>
                 </div>
-                <div className="ml-11">
+                <div className="sm:ml-11 flex flex-col items-center sm:items-stretch">
                   <Input
                     type="date"
                     value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
@@ -406,25 +413,26 @@ export default function AppointmentBooking() {
                     max={format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")}
                     onChange={handleDateChange}
                     disabled={isSubmitting}
-                    className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                    className="w-full text-center sm:text-left bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
                   />
-                  {selectedDate && <p className="text-xs text-primary mt-2 font-medium">✓ {format(selectedDate, "EEEE, MMMM d")}</p>}
+                  {selectedDate && <p className="text-xs text-primary mt-2 font-medium text-center sm:text-left">✓ {format(selectedDate, "EEEE, MMMM d")}</p>}
                 </div>
               </div>
+
 
               {/* Step 2: Time Selection */}
               {selectedDate && !fullyBookedDates.includes(format(selectedDate, "yyyy-MM-dd")) && (
                 <div className="relative animate-fade-in">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold shrink-0">
                       2
                     </div>
                     <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <span>⏰</span> Choose Time Slot
                     </label>
                   </div>
-                  <div className="ml-11">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                  <div className="sm:ml-11">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
                       {getTimeSlotsForDate(selectedDate).map(time => {
                         const isBooked = isSlotBooked(selectedDate, time);
                         const isSelected = selectedTime === time;
@@ -433,7 +441,7 @@ export default function AppointmentBooking() {
                             key={time}
                             disabled={isBooked || isSubmitting}
                             onClick={() => handleTimeSelect(time)}
-                            className={`group/slot px-3 py-3 rounded-xl text-sm font-medium border-2 transition-all duration-300 transform ${
+                            className={`group/slot px-3 py-2.5 sm:py-3 rounded-xl text-sm font-medium border-2 transition-all duration-300 transform ${
                               isBooked
                                 ? "bg-muted/30 text-muted-foreground cursor-not-allowed border-border/20 opacity-50"
                                 : isSelected
@@ -453,25 +461,25 @@ export default function AppointmentBooking() {
 
               {/* Fully booked message */}
               {selectedDate && fullyBookedDates.includes(format(selectedDate, "yyyy-MM-dd")) && (
-                <div className="animate-fade-in bg-amber-50/60 backdrop-blur-sm border-2 border-amber-200/50 rounded-xl p-5 text-amber-900">
+                <div className="animate-fade-in bg-amber-50/60 backdrop-blur-sm border-2 border-amber-200/50 rounded-xl p-4 sm:p-5 text-amber-900 sm:ml-11">
                   <p className="font-semibold flex items-center gap-2 mb-1">
                     <span>📅</span> Date Fully Booked
                   </p>
-                  <p className="text-sm mt-2">All time slots are reserved. Please select another date.</p>
+                  <p className="text-sm mt-1 sm:mt-2">All time slots are reserved. Please select another date.</p>
                 </div>
               )}
 
               {/* Step 3: Personal Information */}
               <div className="relative">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-semibold shrink-0">
                     3
                   </div>
                   <label className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <span>👤</span> Your Details
                   </label>
                 </div>
-                <div className="ml-11 space-y-3">
+                <div className="sm:ml-11 space-y-3">
                   <div>
                     <Input
                       type="text"
@@ -479,7 +487,7 @@ export default function AppointmentBooking() {
                       value={userName}
                       onChange={e => setUserName(e.target.value)}
                       disabled={isSubmitting}
-                      className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                      className="w-full bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
                     />
                     {userName.trim() && <p className="text-xs text-primary mt-1.5 font-medium">✓ Name entered</p>}
                   </div>
@@ -492,7 +500,7 @@ export default function AppointmentBooking() {
                       onChange={e => setUserMobile(e.target.value.replace(/\D/g, ""))}
                       maxLength={10}
                       disabled={isSubmitting}
-                      className="bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
+                      className="w-full bg-white/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 placeholder:text-muted-foreground/50"
                     />
                     {userMobile.trim() && /^\d{10}$/.test(userMobile.trim()) && (
                       <p className="text-xs text-primary mt-1.5 font-medium">✓ Valid mobile number</p>
@@ -505,7 +513,7 @@ export default function AppointmentBooking() {
               {stepsCompleted === totalSteps && (
                 <div className="relative animate-fade-in">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600 text-sm font-semibold">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 text-green-600 text-sm font-semibold shrink-0">
                       ✓
                     </div>
                     <label className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -541,8 +549,8 @@ export default function AppointmentBooking() {
           </Card>
 
           {/* Info box */}
-          <Card className="bg-white/30 backdrop-blur-xl border border-white/50 shadow-xl p-8 mt-10 animate-fade-in">
-            <div className="flex items-start gap-4">
+          <Card className="bg-white/30 backdrop-blur-xl border border-white/50 shadow-xl p-5 sm:p-8 mt-8 sm:mt-10 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
               <div className="text-3xl">💡</div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Why book with us?</p>
@@ -570,6 +578,7 @@ export default function AppointmentBooking() {
         </div>
       </div>
 
+
       {/* Success popup */}
       {showPopup && bookingSuccess && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -577,7 +586,8 @@ export default function AppointmentBooking() {
             className="bg-black/30 backdrop-blur-sm absolute inset-0" 
             onClick={handleClosePopup} 
           />
-          <Card className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl p-10 z-10 max-w-sm w-full text-center animate-fade-in relative overflow-hidden">
+          <Card className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl p-6 sm:p-10 z-10 max-w-sm w-full text-center animate-fade-in relative overflow-hidden">
+
             {/* Success animation background */}
             <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent opacity-0 animate-pulse" />
             
