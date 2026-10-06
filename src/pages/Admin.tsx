@@ -358,21 +358,22 @@ export default function Admin() {
                         <td className="p-4">{app.time}</td>
                         <td className="p-4 font-medium">{app.name}</td>
                         <td className="p-4">{app.mobile}</td>
-                        <td className="p-4 flex items-center gap-2">
+                        <td className="p-4 flex items-center gap-2 whitespace-nowrap">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="gap-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200 font-medium"
+                            className="gap-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200 font-medium shrink-0"
                             onClick={() => handleSendWhatsAppReminder(app)}
                             title="Send WhatsApp Reminder"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-600"><path d="M20.52 3.48A11.86 11.86 0 0 0 12 .5C6.21.5 1.5 5.21 1.5 11c0 1.95.51 3.86 1.48 5.56L.5 23.5l6.98-2.01A11.5 11.5 0 0 0 12 22.5c5.79 0 10.5-4.71 10.5-4.71 10.5-10.5 0-1.92-.52-3.72-1.98-5.02zM12 20.5c-.98 0-1.95-.25-2.79-.72l-.2-.12-4.15 1.2 1.16-3.82-.13-.2A8.44 8.44 0 0 1 3.5 11c0-4.7 3.82-8.5 8.5-8.5 4.7 0 8.5 3.8 8.5 8.5S16.7 20.5 12 20.5z"/></svg>
                             Reminder
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDeleteAppointment(app.id)}>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50 shrink-0" onClick={() => handleDeleteAppointment(app.id)}>
                             Delete
                           </Button>
                         </td>
+
                       </tr>
                     ))
                   )}
