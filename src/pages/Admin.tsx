@@ -9,6 +9,43 @@ import * as XLSX from 'xlsx';
 
 const BACKEND_URL = "https://curamentis-api.onrender.com/api";
 
+const DEFAULT_AVAILABLE_SLOTS = [
+  "11:00",
+  "13:00", "15:00", "17:00", "19:00"
+];
+
+const toMinutes = (timeStr: string) => {
+  const parts = timeStr.trim().split(":");
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return h * 60 + m;
+};
+
+const normalizeTime = (timeStr: string) => {
+  const parts = timeStr.trim().split(":");
+  if (parts.length === 2) {
+    const h = parts[0].padStart(2, "0");
+    const m = parts[1].padStart(2, "0");
+    return `${h}:${m}`;
+  }
+  return timeStr.trim();
+};
+
+const mergeAndSortSlots = (defaultSlots: string[], ...customSlotArrays: string[][]) => {
+  const slotMap = new Map<number, string>();
+  [defaultSlots, ...customSlotArrays].flat().forEach(slot => {
+    if (!slot) return;
+    const normalized = normalizeTime(slot);
+    const minutes = toMinutes(normalized);
+    if (!slotMap.has(minutes)) {
+      slotMap.set(minutes, normalized);
+    }
+  });
+  return Array.from(slotMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([_, time]) => time);
+};
+
 interface Appointment {
   id: string;
   date: string;
@@ -190,7 +227,12 @@ export default function Admin() {
 
   const handleUpdateTimeSlots = async () => {
     if (!customDate || !customTimesInput) return;
-    const times = customTimesInput.split(',').map(t => t.trim()).filter(Boolean);
+    const newTimes = customTimesInput.split(',').map(t => t.trim()).filter(Boolean);
+    const existingConfig = timeSlots.find(ts => ts.date === customDate);
+    const existingTimes = existingConfig ? existingConfig.availableTimes : [];
+
+    const combinedTimes = mergeAndSortSlots(DEFAULT_AVAILABLE_SLOTS, existingTimes, newTimes);
+
     const token = localStorage.getItem("adminToken");
     const res = await fetch(`${BACKEND_URL}/admin/time-slots`, {
       method: "POST",
@@ -198,7 +240,7 @@ export default function Admin() {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}` 
       },
-      body: JSON.stringify({ date: customDate, availableTimes: times })
+      body: JSON.stringify({ date: customDate, availableTimes: combinedTimes })
     });
     if (res.ok) {
       setCustomDate("");
@@ -486,33 +528,39 @@ export default function Admin() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-foreground mb-1 block">Date to override</label>
+                    <label className="text-sm font-semibold text-foreground mb-1 block">Date</label>
                     <Input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-foreground mb-1 block">Available Times (Comma separated)</label>
-                    <Input placeholder="e.g. 10:00, 11:30, 15:00" value={customTimesInput} onChange={e => setCustomTimesInput(e.target.value)} />
+                    <label className="text-sm font-semibold text-foreground mb-1 block">Add Custom Times (Comma separated)</label>
+                    <Input placeholder="e.g. 10:00, 14:00, 20:00" value={customTimesInput} onChange={e => setCustomTimesInput(e.target.value)} />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Default times (11:00, 13:00, 15:00, 17:00, 19:00) remain intact, and custom times are automatically placed in exact chronological order.
+                    </p>
                   </div>
-                  <Button onClick={handleUpdateTimeSlots} className="w-full">Update Available Slots</Button>
+                  <Button onClick={handleUpdateTimeSlots} className="w-full">Add Time Slots</Button>
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold text-sm mb-3 text-slate-500">Currently Overridden Dates</h3>
+                  <h3 className="font-semibold text-sm mb-3 text-slate-500">Dates with Custom Schedules</h3>
                   {timeSlots.length === 0 ? (
                     <p className="text-sm text-slate-500">No custom schedules defined.</p>
                   ) : (
                     <div className="space-y-3">
-                      {timeSlots.map(ts => (
-                        <div key={ts.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm">
-                          <div>
-                            <span className="font-bold text-primary block mb-1">{ts.date}</span>
-                            <span className="text-slate-600">{ts.availableTimes.join(", ")}</span>
+                      {timeSlots.map(ts => {
+                        const allSlots = mergeAndSortSlots(DEFAULT_AVAILABLE_SLOTS, ts.availableTimes || []);
+                        return (
+                          <div key={ts.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                            <div>
+                              <span className="font-bold text-primary block mb-1">{ts.date}</span>
+                              <span className="text-slate-600">{allSlots.join(", ")}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDeleteTimeSlot(ts.date)}>
+                              Remove
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50" onClick={() => handleDeleteTimeSlot(ts.date)}>
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

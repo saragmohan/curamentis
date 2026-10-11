@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 // Saves name, mobile, and date to Google Sheet via Google Forms
 
 const AVAILABLE_SLOTS = [
-  "09:00", "11:00",
+  "11:00",
   "13:00", "15:00", "17:00", "19:00"
 ];
 
@@ -79,15 +79,44 @@ export default function AppointmentBooking() {
     }
   }
 
-  // Get time slots for a specific date (from sheet or default)
+  // Helper to normalize and convert time to minutes for chronological sorting
+  const toMinutes = (timeStr: string) => {
+    const parts = timeStr.trim().split(":");
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return h * 60 + m;
+  };
+
+  const normalizeTime = (timeStr: string) => {
+    const parts = timeStr.trim().split(":");
+    if (parts.length === 2) {
+      const h = parts[0].padStart(2, "0");
+      const m = parts[1].padStart(2, "0");
+      return `${h}:${m}`;
+    }
+    return timeStr.trim();
+  };
+
+  // Get time slots for a specific date (retains default slots and adds custom slots in exact order)
   const getTimeSlotsForDate = (date: Date): string[] => {
     const dateStr = format(date, "yyyy-MM-dd");
-    // If date has custom slots in sheet, use those
-    if (timeSlotsByDate[dateStr] && timeSlotsByDate[dateStr].length > 0) {
-      return timeSlotsByDate[dateStr];
-    }
-    // Otherwise use global availableSlots
-    return availableSlots;
+    const customSlots = (timeSlotsByDate[dateStr] && timeSlotsByDate[dateStr].length > 0)
+      ? timeSlotsByDate[dateStr]
+      : [];
+
+    const slotMap = new Map<number, string>();
+    [...availableSlots, ...customSlots].forEach(slot => {
+      if (!slot) return;
+      const normalized = normalizeTime(slot);
+      const minutes = toMinutes(normalized);
+      if (!slotMap.has(minutes)) {
+        slotMap.set(minutes, normalized);
+      }
+    });
+
+    return Array.from(slotMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([_, time]) => time);
   };
 
   // Fetch blocked slots from backend
